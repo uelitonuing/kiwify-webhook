@@ -73,6 +73,53 @@ app.post("/webhook/kiwify", (req, res) => {
 
   console.log("Webhook válido recebido:", new Date().toISOString());
   console.log(JSON.stringify(req.body, null, 2));
+  const payload = req.body;
+
+  const status = pegar(payload, [
+    "status",
+    "order.status",
+    "sale.status",
+    "payment.status"
+  ]) || "desconhecido";
+
+  const produto = pegar(payload, [
+    "product.name",
+    "order.product_name",
+    "order.product.name",
+    "sale.product_name",
+    "sale.product.name"
+  ]) || "não identificado";
+
+  const nome = pegar(payload, [
+    "customer.name",
+    "buyer.name",
+    "order.customer.name",
+    "order.buyer.name"
+  ]) || "não identificado";
+
+  const valorRaw = pegar(payload, [
+    "order.total",
+    "order.amount",
+    "sale.total",
+    "sale.amount",
+    "payment.amount",
+    "amount",
+    "total"
+  ]);
+
+  const valorBRL = formatarBRL(valorRaw) || String(valorRaw || "não identificado");
+
+  // Envia em paralelo (não trava a resposta da Kiwify)
+  const msg =
+`🧾 Kiwify - Atualização
+
+✅ Status: ${status}
+📦 Produto: ${produto}
+👤 Cliente: ${nome}
+💰 Valor: ${valorBRL}
+🕒 ${new Date().toLocaleString("pt-BR")}`;
+
+  enviarTelegram(msg).catch(() => {});
 
   return res.status(200).json({ ok: true });
 });
@@ -80,5 +127,6 @@ app.post("/webhook/kiwify", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Rodando na porta", PORT));
+
 
 
